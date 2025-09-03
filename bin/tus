@@ -23,7 +23,7 @@ function warning { local message="${1}"
 
 function usage { local message="${1}";
   [ -n "${message}" ] \
-    && echo -e "\033[0;31m➤\033[0m \033[1m${message}\033[21m"
+    && echo -e "\033[0;31m➤\033[0m \033[1m${message}\033[0m"
   cat <<-EOTXT
 
 Usage:
