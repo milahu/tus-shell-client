@@ -155,7 +155,7 @@ function tus_upload {
         )"
 
         tus_complete "${file}" "${dest}" "${part}" "$response"
-        echo -ne "\033[22m"
+        echo -ne "\033[0m"
         finished=0
       fi
       part=$((part + 1))
