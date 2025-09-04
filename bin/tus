@@ -39,6 +39,7 @@ Options:
   -H HEADER         Set additional header.
   -r                Reuploads given file from the beginning.
   -h                Shows usage.
+  -D                Debug.
 
 EOTXT
   echo -e "\033[2m➤ https://tus.io/protocols/resumable-upload.html\033[0m"
@@ -229,7 +230,8 @@ trap cleanup EXIT
 IFS=',' read -r -a TUS_HEADERS <<< "${TUS_HEADERS}"
 OPT_RESET=0
 OPT_OPTIONS=0
-while getopts ohrc:p:H:t: opt
+OPT_DEBUG=0
+while getopts ohrc:p:H:t:D opt
 do
   case "${opt}" in
     t)
@@ -257,10 +259,17 @@ do
     o)
       OPT_OPTIONS=1
     ;;
+    D)
+      OPT_DEBUG=1
+    ;;
     ?) usage
    esac
 done
 shift $((OPTIND - 1))
+
+if [ $OPT_DEBUG = 1 ]; then
+  set -x
+fi
 
 [ -z "${TUSD}" ] && error 'tusd endpoint' 'TUSD'
 readarray -t TUS_OPTIONS <<<"$(tus_options)"
