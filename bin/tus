@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-: "${TUSD:=""}"
-: "${TUS_HEADERS:=''}"
+: "${TUSD:=}"
+: "${TUS_HEADERS:=}"
 export TUS_CHUNK_SIZE=${TUS_CHUNK_SIZE:-1048576}
 export TUS_PARALLEL=${TUS_PARALLEL:-1}
 
