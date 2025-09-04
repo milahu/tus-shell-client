@@ -327,7 +327,7 @@ if [ ${#Location[@]} = 0 ]; then
   # create resumable log file
   cat <<-EOTUS > "$FILE.tus"
 # settings
-TUSD=""$TUSD""
+TUSD="$TUSD"
 TUS_HEADERS="$(join ', ' "${TUS_HEADERS[@]}")"
 TUS_CHUNK_SIZE="$TUS_CHUNK_SIZE"
 TUS_PARALLEL="$TUS_PARALLEL"
