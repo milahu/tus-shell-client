@@ -69,13 +69,12 @@ function join { local IFS="$1"; shift
 
 # ==============================================================================
 # tus
-tus_location=$(mktemp -u)
-mkfifo $tus_location
 
 function tus_options {
   # The Client SHOULD NOT include the Tus-Resumable header in the request and the Server MUST ignore the header.
   eval "local tus_headers=($(expand '-H' "${TUS_HEADERS[@]}"))"
   curl -s \
+    --fail-with-body \
     "${tus_headers[@]}" \
     --head \
     --request OPTIONS \
@@ -104,6 +103,7 @@ function tus_create {
   # whatever gets printed next overwrites what was there.
   # ... | tr -d '\015'
   curl -s \
+    --fail-with-body \
     "${tus_headers[@]}" \
     --head \
     --request POST \
@@ -112,8 +112,7 @@ function tus_create {
     --header "Upload-Length: ${size}" \
     --header "Upload-Metadata: name $(basename "${file}" | tr -d '\n' | base64)" \
     --header "Connection: close" \
-    ${TUSD} | grep 'Location:' | awk '{print $2}' | tr -d '\015' 1> $tus_location 2>&1 &
-  return $?
+    ${TUSD} | grep 'Location:' | awk '{print $2}' | tr -d '\015'
 }
 
 function tus_upload {
@@ -125,9 +124,6 @@ function tus_upload {
   local parts="${4}"
   local multi="${5}"
   local color=$(( $RANDOM % 7 + 31 ))
-
-  response=$(mktemp -u)
-  mkfifo $response
 
   while true; do local part=0; local finished=1
     while [ "${part}" -lt "${parts}" ]; do
@@ -145,6 +141,7 @@ function tus_upload {
         # >> tusd will break connection after 'Content-Length'
         # >> ? curl: how to set content length to upload
 
+        response="$(
         curl --progress-bar \
           "${tus_headers[@]}" \
           --write-out "%{http_code}" \
@@ -154,9 +151,10 @@ function tus_upload {
           --header "Content-Length: ${length}" \
           --header "Upload-Offset: ${offset}" \
           --data-binary "@-" \
-          "${dest}" < <(dd if=${file} skip=$(( file_offset + offset )) count=${length} iflag=skip_bytes,count_bytes 2>/dev/null) 1> $response &
+          "${dest}" < <(dd if=${file} skip=$(( file_offset + offset )) count=${length} iflag=skip_bytes,count_bytes 2>/dev/null)
+        )"
 
-        tus_complete "${file}" "${dest}" "${part}" "$(tee < $response)"
+        tus_complete "${file}" "${dest}" "${part}" "$response"
         echo -ne "\033[22m"
         finished=0
       fi
@@ -165,7 +163,6 @@ function tus_upload {
 
     [ ${finished} -eq 1 ] && break
   done
-  rm $response
 }
 
 # TODO unhandled error codes
@@ -196,6 +193,7 @@ function tus_concat {
 
   eval "local tus_headers=($(expand '-H' "${TUS_HEADERS[@]}"))"
   curl -v \
+    --fail-with-body \
     "${tus_headers[@]}" \
     --head \
     --request POST \
@@ -204,8 +202,7 @@ function tus_concat {
     --header "Upload-Concat: final;$(strip-domain "${TUSD}" "${@}")" \
     --header "Upload-Metadata: name $(basename "${file}" | tr -d '\n' | base64)" \
     --header "Connection: close" \
-    ${TUSD} | grep 'Location:' | awk '{print $2}' | tr -d '\015' 1> $tus_location 2>&1 &
-  echo $?
+    ${TUSD} | grep 'Location:' | awk '{print $2}' | tr -d '\015'
 }
 
 function tus_done {
@@ -218,12 +215,6 @@ function tus_done {
 # ==============================================================================
 # main
 declare -A pids
-
-function cleanup {
-  rm $tus_location
-  # kill "${pids[@]}"
-}
-trap cleanup EXIT
 
 # ==============================================================================
 # pre
@@ -320,8 +311,9 @@ if [ -z "${Location[@]}" ]; then
       length=$(( partials * TUS_CHUNK_SIZE ))
     fi
 
-    tus_create "${FILE}" "${length}" "${headers[@]}" || error 'Tus file creation failed'
-    read dest < $tus_location
+    if ! dest="$(tus_create "${FILE}" "${length}" "${headers[@]}")"; then
+      error 'Tus file creation failed'
+    fi
     Location[$dest]="${partials}-${i}"
   done
 
@@ -354,7 +346,8 @@ while [ ${#pids[@]} -gt 0 ]; do
 done
 
 if [ "${TUS_PARALLEL}" -gt 1 ]; then
-  tus_concat "${!Location[@]}" || error 'Tus concatenation failed'
-  read dest < $tus_location
+  if ! dest="$(tus_concat "${!Location[@]}")"; then
+    error 'Tus concatenation failed'
+  fi
 fi
 tus_done "${dest}"
