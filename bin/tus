@@ -49,10 +49,17 @@ EOTXT
 
 # ==============================================================================
 # helper
-function ceil { local dividend="${1}"; local divisor="${2}"
-  [ $(( dividend % divisor )) -gt 0 ] \
-    && echo $(( ( ( $dividend - ( $dividend % $divisor ) ) / $divisor ) + 1 )) \
-    || echo $(( $dividend / $divisor ))
+
+# https://stackoverflow.com/a/34545932/10440128
+function ceildiv() {
+    local num=${1:-0}
+    local div=${2:-1}
+    if ! ((div)); then return 1; fi
+    if ((num >= 0)); then
+        echo $(( (num + div - 1) / div ))
+    else
+        echo $(( -(-num + div - 1) / div ))
+    fi
 }
 
 function expand { local prefix="${1}"; shift; for entry in "${@}"; do
@@ -288,7 +295,7 @@ declare -A Location
   && . <(cat "${FILE}.tus" | grep -E '^(TUSD|TUS_HEADERS|TUS_CHUNK_SIZE|TUS_PARALLEL|Location)')
 # TODO vaildate values.
 
-total_parts="$(ceil "${SIZE}" "${TUS_CHUNK_SIZE}")"
+total_parts="$(ceildiv "$SIZE" "$TUS_CHUNK_SIZE")"
 
 if [ -z "${Location[@]}" ]; then
   headers=()
