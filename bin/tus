@@ -137,7 +137,7 @@ function tus_upload {
         [ ${length} -gt "${TUS_CHUNK_SIZE}" ] \
           && length="${TUS_CHUNK_SIZE}"
 
-        echo -e "\033[0;32m🠹\033[0m Upload \033[1m\e[1;${color}mpart ${part}\e[0m\033[21m."
+        echo -e "\033[0;32m🠹\033[0m Upload \033[1m\e[1;${color}mpart ${part}\e[0m\033[0m."
         echo -e "\033[2m↳ ${dest}"
         eval "local tus_headers=($(expand '-H' "${TUS_HEADERS[@]}"))"
         # TODO curl will throw (55: Broken pipe)
@@ -186,7 +186,7 @@ function tus_complete {
     # write
     echo "${key} uploaded." >> "${FILE}.tus"
   else
-    warning "\033[1m${part}\033[21m failed. Will retry.\n\033[2m↳ $(echo ${4} | tr -d '\n')\033[22m"
+    warning "\033[1m${part}\033[0m failed. Will retry.\n\033[2m↳ $(echo ${4} | tr -d '\n')\033[0m"
   fi
 }
 
@@ -329,7 +329,7 @@ $(declare -p Location)
 EOTUS
 fi
 
-echo -e "\033[0;35m∑\033[0m \033[1m${total_parts} parts\033[21m to upload."
+echo -e "\033[0;35m∑\033[0m \033[1m${total_parts} parts\033[0m to upload."
 for dest in "${!Location[@]}"; do
   __=(${Location[$dest]//-/ })
   tus_upload "${dest}" "${FILE}" "${SIZE}" "${__[0]}" "${__[1]}" &
