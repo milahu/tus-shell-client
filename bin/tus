@@ -153,7 +153,7 @@ function tus_upload {
           --header "Content-Length: $length" \
           --header "Upload-Offset: $offset" \
           --data-binary "@-" \
-          "$dest" < <(dd if="$file" skip=$(( file_offset + offset )) count="$length" iflag=skip_bytes,count_bytes 2>/dev/null)
+          "$dest" < <(dd if="$file" skip=$(( file_offset + offset )) count="$length" iflag=skip_bytes,count_bytes status=none)
         )"
 
         tus_complete "$file" "$dest" "$part" "$response"
