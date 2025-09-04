@@ -99,7 +99,7 @@ function get_tus_options {
     echo "$response" | tr -d '\r'
     return $rc
   fi
-  echo "$response" | grep '^Tus-' | tr -d '\r'
+  echo "$response" | grep -i '^Tus-' | tr -d '\r'
 }
 
 function tus_supports {
