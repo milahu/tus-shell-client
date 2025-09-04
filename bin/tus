@@ -293,11 +293,12 @@ if [ "$OPT_OPTIONS" = 1 ]; then
   if [ ${#TUS_OPTIONS[@]} = 0 ]; then
     error "No tusd headers"
   else for opt in "${TUS_OPTIONS[@]}"; do
-    IFS=':' read -r -a header <<< "$opt"
-    echo -e "\033[0;32m➤\033[0m ${header[0]}"
-    IFS=',' read -r -a values <<< "${header[1]}"
+    IFS=':' read -r key values <<< "$opt"
+    echo -e "\033[0;32m➤\033[0m $key"
+    if [ "${values:0:1}" = " " ]; then values="${values:1}"; fi
+    IFS=',' read -r -a values <<< "$values"
     for value in "${values[@]}"; do
-      echo -e "\033[2m↳ $(echo "$value" | xargs)\033[0m"
+      echo -e "\033[2m  ↳ $(echo "$value" | xargs)\033[0m"
     done
   done; fi
   exit 0
