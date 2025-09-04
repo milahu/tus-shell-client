@@ -62,9 +62,13 @@ function ceildiv() {
     fi
 }
 
-function expand { local prefix="$1"; shift; for entry in "$@"; do
-  [ -n "$entry" ] && echo -e "$prefix \"$entry\"";
-done; }
+function set_header_args() {
+  # note: nonlocal variable: header_args
+  local header
+  for header in "$@"; do
+    header_args+=("-H" "$header")
+  done
+}
 
 function strip-domain { for entry in "$@"; do
   [ -n "$entry" ] && echo -n "$entry " | sed -E 's|^https?://[^/]+(.*)|\1|';
@@ -79,10 +83,11 @@ function join { local IFS="$1"; shift
 
 function tus_options {
   # The Client SHOULD NOT include the Tus-Resumable header in the request and the Server MUST ignore the header.
-  eval "local tus_headers=($(expand '-H' "${TUS_HEADERS[@]}"))"
+  local header_args=()
+  set_header_args "${TUS_HEADERS[@]}"
   curl -s \
     --fail-with-body \
-    "${tus_headers[@]}" \
+    "${header_args[@]}" \
     --head \
     --request OPTIONS \
     "$TUSD" | grep '^Tus-' | tr -d '\r'
@@ -97,15 +102,16 @@ function tus_create {
   local file="$1"; shift
   local size="$1"; shift
 
-  eval "local tus_headers=($(expand '-H' "${TUS_HEADERS[@]}"))"
+  local header_args=()
+  set_header_args "${TUS_HEADERS[@]}"
   for header in "$@"; do
-    tus_headers+=(-H "$header")
+    header_args+=(-H "$header")
   done
 
   # Most HTTP server use '\r\n' line endings, so here we remove the '\r'
   curl -s \
     --fail-with-body \
-    "${tus_headers[@]}" \
+    "${header_args[@]}" \
     --head \
     --request POST \
     --header "Tus-Resumable: 1.0.0" \
@@ -138,14 +144,15 @@ function tus_upload {
 
         echo -e "\033[0;32m🠹\033[0m Upload \033[1m\e[1;${color}mpart $part\e[0m\033[0m."
         echo -e "\033[2m↳ $dest"
-        eval "local tus_headers=($(expand '-H' "${TUS_HEADERS[@]}"))"
+        local header_args=()
+        set_header_args "${TUS_HEADERS[@]}"
         # TODO curl will throw (55: Broken pipe)
         # >> tusd will break connection after 'Content-Length'
         # >> ? curl: how to set content length to upload
 
         response="$(
         curl --progress-bar \
-          "${tus_headers[@]}" \
+          "${header_args[@]}" \
           --write-out "%{http_code}" \
           --request PATCH \
           --header "Tus-Resumable: 1.0.0" \
@@ -193,10 +200,11 @@ function tus_complete {
 function tus_concat {
   local file="$1"
 
-  eval "local tus_headers=($(expand '-H' "${TUS_HEADERS[@]}"))"
+  local header_args=()
+  set_header_args "${TUS_HEADERS[@]}"
   curl -v \
     --fail-with-body \
-    "${tus_headers[@]}" \
+    "${header_args[@]}" \
     --head \
     --request POST \
     --header "Tus-Resumable: 1.0.0" \
